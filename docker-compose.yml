@@ -1,0 +1,56 @@
+version: "3.8"
+
+services:
+  postgres:
+    image: postgres:14.5
+    ports:
+      - "5432:5432"
+    networks:
+      inside:
+        ipv4_address: 10.0.0.1
+      default: {}
+    healthcheck:
+      test: "pg_isready --username=admin && psql --username=admin --list"
+      timeout: 10s
+      retries: 20
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: example
+    volumes:
+      - ./build/stack-files/postgres/db:/var/lib/postgresql/data
+      - ./stack-files/postgres:/docker-entrypoint-initdb.d
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:21.1
+    environment:
+      - KEYCLOAK_ADMIN=admin
+      - KEYCLOAK_ADMIN_PASSWORD=admin
+      - KC_DB=postgres
+      - KC_DB_URL=jdbc:postgresql://postgres-int/keycloak
+      - KC_DB_USERNAME=keycloak
+      - KC_DB_PASSWORD=keycloak
+      - KC_HEALTH_ENABLED=true
+      - KC_METRICS_ENABLED=true
+      - KC_HOSTNAME=localhost
+      - KC_HOSTNAME_STRICT=false
+      - KC_HOSTNAME_STRICT_HTTPS=false
+      - KC_HTTP_ENABLED=true
+    ports:
+      - "8081:8080"
+    networks:
+      inside:
+        ipv4_address: 10.0.0.2
+      default: {}
+    entrypoint:
+      - /opt/keycloak/bin/kc.sh
+      - start-dev
+      - "--import-realm"
+      - "--http-relative-path=/keycloak"
+    volumes:
+      - ./build/stack-files/keycloak/export:/data/export
+      - ./stack-files/keycloak/import:/opt/keycloak/data/import
+    extra_hosts:
+      - "postgres-int:10.0.0.1"
+    depends_on:
+      postgres:
+        condition: service_healthy

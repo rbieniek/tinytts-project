@@ -1,0 +1,3 @@
+CREATE USER tinytts WITH PASSWORD 'tinytts';
+CREATE DATABASE tinytts;
+GRANT ALL PRIVILEGES ON DATABASE tinytts TO tinytts;
